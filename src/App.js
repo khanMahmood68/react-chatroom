@@ -1,32 +1,63 @@
 import "./App.css";
-import {
-  getDatabase,
-  ref,
-  push,
-  set,
-  onChildAdded,
-  addCommentElement,
-} from "firebase/database";
+import { getDatabase, ref, push, set, onChildAdded } from "firebase/database";
 import { useEffect, useState } from "react";
+import { GoogleAuthProvider, getAuth, signInWithPopup } from "firebase/auth";
 
 function App() {
-  const [name, setName] = useState("");
+  const provider = new GoogleAuthProvider();
+  const auth = getAuth();
+
+  const googleLogin = () => {
+    signInWithPopup(auth, provider)
+      .then((result) => {
+        // This gives you a Google Access Token. You can use it to access the Google API.
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        const token = credential.accessToken;
+        // The signed-in user info.
+        const user = result.user;
+        // IdP data available using getAdditionalUserInfo(result)
+        setUser({ name: user.displayName, email: user.email });
+      })
+      .catch((error) => {
+        // Handle Errors here.
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        // The email of the user's account used.
+        const email = error.customData.email;
+        // The AuthCredential type that was used.
+        const credential = GoogleAuthProvider.credentialFromError(error);
+        // ...
+      });
+  };
+
+  const [user, setUser] = useState("");
   const [chats, setChats] = useState([]);
   const [message, setMessage] = useState("");
 
   const db = getDatabase();
   const chatListRef = ref(db, "chats");
 
+  const updateHeight = () => {
+    const el = document.getElementById("chat");
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  };
+
   useEffect(() => {
     onChildAdded(chatListRef, (data) => {
       setChats((chats) => [...chats, data.val()]);
+
+      setTimeout(() => {
+        updateHeight();
+      }, 100);
     });
   }, []);
 
   const sendChat = () => {
     const chatRef = push(chatListRef);
     set(chatRef, {
-      name,
+      user,
       message: message,
     });
     // // const c = [...chats,{ name: name, message: message }];
@@ -40,27 +71,30 @@ function App() {
   };
   return (
     <div>
-      {name ? null : (
+      {user.email ? null : (
         <div>
-          <input
+          {/* <input
             type="text"
             placeholder="Enter name to start chat"
             onBlur={(e) => setName(e.target.value)}
-          />
+          /> */}
+          <button onClick={(e) => googleLogin()}>Google SignIn</button>
         </div>
       )}
 
-      {name ? (
+      {user.email ? (
         <div>
-          <h3>User:{name}</h3>
-          <div className="chat-container">
+          <h3>User:{user.name}</h3>
+          <div id="chat" className="chat-container">
             {chats.map((c, i) => (
               <div
                 key={i}
-                className={`container ${c.name === name ? "me" : ""}`}
+                className={`container ${
+                  c.user.email === user.email ? "me" : ""
+                }`}
               >
                 <p className="chatbox">
-                  <strong>{c.name}:</strong>
+                  <strong>{c.user.name}:</strong>
                   <span>{c.message}</span>
                 </p>
               </div>
