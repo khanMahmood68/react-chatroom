@@ -35,3 +35,9 @@
   padding: 10px 0;
   width:90px;
 }
+
+.chat-container{
+  height: 70vh;
+  overflow-y: scroll;
+  border: 1px solid grey;
+}
